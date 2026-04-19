@@ -1,0 +1,19 @@
+[project]
+name = "fullerton-assessment"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.136.0",
+    "openai>=2.14.0",
+    "pillow>=12.2.0",
+    "pymupdf>=1.27.2.2",
+    "pytest>=9.0.3",
+    "python-multipart>=0.0.20",
+    "uvicorn>=0.44.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

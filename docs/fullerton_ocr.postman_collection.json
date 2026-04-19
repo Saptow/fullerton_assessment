@@ -1,0 +1,72 @@
+{
+  "info": {
+    "_postman_id": "a62a66c5-0e77-49bf-98e8-2ac99d9f03a6",
+    "name": "Fullerton OCR API",
+    "description": "Postman collection for the Fullerton Assessment OCR FastAPI service.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "OCR Upload",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": []
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/ocr",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "ocr"
+          ]
+        },
+        "description": "Choose a local PDF, JPG, or PNG in the file form-data row before sending."
+      },
+      "response": []
+    }
+  ]
+}
