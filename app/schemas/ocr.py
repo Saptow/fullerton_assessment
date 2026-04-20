@@ -7,10 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 
 
 # Shared value types for final OCR responses.
-UnsureValue = Literal["unsure"]
-TextValue = str | UnsureValue | None
-IntegerValue = int | UnsureValue | None
-BooleanValue = bool | UnsureValue
+TextValue = str | None
+IntegerValue = int | None
+BooleanValue = bool
 
 # OpenAI extraction can emit decimals before final schema normalization.
 ExtractedFieldPrimitive = str | int | float | bool | None
@@ -33,13 +32,13 @@ AMOUNT_DESCRIPTION = (
 # Schema validators normalize model output before API serialization.
 def _validate_provider_name(value: TextValue) -> TextValue:
     # Fullerton Health is the submitter in this assessment, not the provider.
-    if isinstance(value, str) and value != "unsure" and "Fullerton Health" in value:
+    if isinstance(value, str) and "Fullerton Health" in value:
         return None
     return value
 
 
 def _validate_date(value: Any) -> TextValue:
-    if value is None or value == "unsure":
+    if value is None:
         return value
 
     if isinstance(value, datetime):
@@ -85,7 +84,7 @@ def _validate_date(value: Any) -> TextValue:
 
 
 def _validate_amount(value: Any) -> IntegerValue:
-    if value is None or value == "unsure":
+    if value is None:
         return value
 
     if isinstance(value, bool):
@@ -119,7 +118,7 @@ def _validate_amount(value: Any) -> IntegerValue:
     return int(number.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
-# Document schemas; allow null and "unsure" for missing or gated fields.
+# Document schemas use null for missing or low-confidence fields.
 class ReferralLetter(BaseModel):
     claimant_name: TextValue = Field(default=None, description="Patient name.")
     provider_name: TextValue = Field(
@@ -183,7 +182,7 @@ class MedicalCertificate(BaseModel):
     diagnosis_name: TextValue = Field(default=None, description="Diagnosis.")
     discharge_date_time: TextValue = Field(
         default=None,
-        description="Discharge date in DD/MM/YYYY format.",
+        description="Discharge date of Medical Certificate in DD/MM/YYYY format.",
         examples=["08/04/2026"],
     )
     icd_code: TextValue = Field(default=None, description="ICD code.")
@@ -193,7 +192,7 @@ class MedicalCertificate(BaseModel):
     )
     submission_date_time: TextValue = Field(
         default=None,
-        description="Admission datetime in DD/MM/YYYY format.",
+        description="Submission of Medical Certificate datetime, can be typically found near corners of the document with both date and time. Format might be MM/DD/YYYY, HH:MM.If time is present, ignore and extract only date.",
         examples=["08/04/2026"],
     )
     date_of_mc: TextValue = Field(

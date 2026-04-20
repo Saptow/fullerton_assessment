@@ -139,7 +139,7 @@ This gives a few benefits:
 The confidence threshold acts as a gating mechanism:
 
 - High-confidence values are accepted.
-- Low-confidence values are returned as `"unsure"`, which for now, will be returned as `"null"` as well, but can be adjusted based on use case. 
+- Low-confidence values are returned as `null`.
 - Missing or unsupported fields remain `null`.
 
 This keeps the extraction process schema-driven rather than rule-driven.
@@ -244,6 +244,6 @@ The test suite covers the API layer, schema validation, and OCR service orchestr
 - Verifies the OCR service uses the two-step OpenAI flow: classification first, extraction second.
 - Verifies image payloads are sent to OpenAI as base64 data URLs.
 - Verifies Pydantic structured output models are passed to the OpenAI client.
-- Verifies confidence-threshold post-processing converts low-confidence extracted fields to `"unsure"`.
+- Verifies confidence-threshold post-processing converts low-confidence extracted fields to `null`.
 - Verifies PDF uploads are rendered into page images before model calls.
 - Verifies low-confidence document classification is rejected.

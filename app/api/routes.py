@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, File, UploadFile, status
@@ -11,6 +12,7 @@ from app.constants import (
 from app.schemas import DocumentClassificationError, OCRResponse
 from app.services.ocr import OCRService
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Main endpoint for OCR extraction with comprehensive validation and error handling
@@ -68,12 +70,14 @@ async def create_ocr_extraction(
             filename=file.filename or "uploaded_file",
             content_type=file.content_type,
         )
-    except DocumentClassificationError:
+    except DocumentClassificationError as exc:
+        logger.debug("Unsupported document classification payload=%s", exc.payload)
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"error": "unsupported_document_type"},
         )
     except Exception:
+        logger.exception("Unhandled OCR route error")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "internal_server_error"},

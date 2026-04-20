@@ -75,12 +75,12 @@ def test_referral_letter_amounts_round_decimals_instead_of_stripping_them() -> N
     referral_letter = ReferralLetter(
         total_amount_paid=1200.5,
         total_approved_amount="$1,199.49",
-        total_requested_amount="unsure",
+        total_requested_amount=None,
     )
 
     assert referral_letter.total_amount_paid == 1201
     assert referral_letter.total_approved_amount == 1199
-    assert referral_letter.total_requested_amount == "unsure"
+    assert referral_letter.total_requested_amount is None
 
 
 def test_referral_letter_defaults_null_signature_presence_to_false() -> None:

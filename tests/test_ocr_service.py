@@ -68,6 +68,7 @@ def test_service_uses_two_stage_openai_prompts_and_structured_outputs() -> None:
             {
                 "fields": {
                     "claimant_name": {"value": "Jane Tan", "confidence": 0.91},
+                    "provider_name": {"value": "unsure", "confidence": 0.91},
                     "tax_amount": {"value": 80, "confidence": 0.49},
                     "total_amount": {"value": 1200, "confidence": 0.95},
                 }
@@ -113,7 +114,8 @@ def test_service_uses_two_stage_openai_prompts_and_structured_outputs() -> None:
     assert response.result.classification_elapsed >= 0
     assert response.result.extraction_elapsed >= 0
     assert response.result.final_json.claimant_name == "Jane Tan"
-    assert response.result.final_json.tax_amount == "unsure"
+    assert response.result.final_json.provider_name is None
+    assert response.result.final_json.tax_amount is None
     assert response.result.final_json.total_amount == 1200
 
 

@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import time
 from io import BytesIO
 from pathlib import Path
@@ -26,14 +27,18 @@ from app.schemas import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 class OCRService:
     """OCR pipeline using PyMuPDF rendering and OpenAI structured outputs."""
 
-    pdf_render_scale = 3  # Balances PDF render quality against processing time.
+    pdf_render_scale = 4  # Balances PDF render quality against processing time.
     min_image_width = 1200  # Upscales small images enough for readable OCR.
     binarization_threshold = 150  # Splits foreground text from background noise.
-    confidence_threshold = 0.5  # Below this, extracted fields become "unsure".
-    classification_confidence_threshold = 0.75  # Below this, the type is unsupported.
+    confidence_threshold = 0.5  # Below this, extracted fields become null.
+    classification_confidence_threshold = 0.9  # Below this, the type is unsupported.
+    null_extracted_values = {"", "unsure", "unknown", "n/a", "na", "none", "null"}
 
     def __init__(
         self,
@@ -55,6 +60,13 @@ class OCRService:
 
             self._openai_client = OpenAI()
 
+        logger.debug(
+            "Calling OpenAI structured output model=%s output_model=%s image_count=%s",
+            settings.openai_model,
+            output_model.__name__,
+            len(images),
+        )
+
         content: list[dict[str, Any]] = [{"type": "input_text", "text": prompt}]
         for image in images:
             buffer = BytesIO()
@@ -73,6 +85,7 @@ class OCRService:
             input=[{"role": "user", "content": content}],
             text_format=output_model,
         )
+        logger.debug("OpenAI structured output parsed as %s", output_model.__name__)
         return response.output_parsed.model_dump(mode="json")
 
     # Main method to extract text from the uploaded document.
@@ -85,6 +98,11 @@ class OCRService:
     ) -> OCRResponse:
         started_at = time.perf_counter()
         cleaning_started_at = time.perf_counter()
+        logger.debug(
+            "Starting OCR extraction filename=%s content_type=%s",
+            filename,
+            content_type,
+        )
 
         # Load the uploaded document into one or more RGB page images.
         images: list[Image.Image] = []
@@ -111,6 +129,8 @@ class OCRService:
             image = Image.open(BytesIO(file_bytes))
             images.append(image.convert("RGB"))
 
+        logger.debug("Loaded %s page image(s)", len(images))
+
         # Normalize contrast and text edges before sending images to OpenAI vision.
         cleaned_images: list[Image.Image] = []
         for image in images:
@@ -132,6 +152,7 @@ class OCRService:
             cleaned_images.append(cleaned.convert("RGB"))
 
         cleaning_elapsed = time.perf_counter() - cleaning_started_at
+        logger.debug("Image cleaning completed in %.2fs", cleaning_elapsed)
 
         # First OpenAI pass: classify the document before spending on extraction.
         classification_prompt = CLASSIFICATION_PROMPT_TEMPLATE.format(
@@ -146,6 +167,12 @@ class OCRService:
         classification_elapsed = time.perf_counter() - classification_started_at
         document_type = classification_payload.get("document_type")
         classification_confidence = classification_payload.get("confidence", 0)
+        logger.debug(
+            "Classification completed document_type=%s confidence=%s elapsed=%.2fs",
+            document_type,
+            classification_confidence,
+            classification_elapsed,
+        )
 
         try:
             classification_confidence = float(classification_confidence)
@@ -178,6 +205,11 @@ class OCRService:
             output_model=extraction_output_model,
         )
         extraction_elapsed = time.perf_counter() - extraction_started_at
+        logger.debug(
+            "Extraction completed document_type=%s elapsed=%.2fs",
+            document_type,
+            extraction_elapsed,
+        )
 
         fields = extraction_payload.get("fields", extraction_payload)
         if not isinstance(fields, dict):
@@ -189,13 +221,22 @@ class OCRService:
             field_payload = fields.get(field_name)
 
             if field_payload is None:
-                values[field_name] = None
+                value = None
             elif not isinstance(field_payload, dict):
-                values[field_name] = field_payload
+                value = field_payload
             elif field_payload.get("confidence", 0) < self.confidence_threshold:
-                values[field_name] = "unsure"
+                value = None
             else:
-                values[field_name] = field_payload.get("value")
+                value = field_payload.get("value")
+
+            if (
+                isinstance(value, str)
+                and value.strip().lower() in self.null_extracted_values
+            ):
+                logger.debug("Normalizing placeholder value to null field=%s", field_name)
+                value = None
+
+            values[field_name] = value
 
         return OCRResponse(
             result=OCRResult(
