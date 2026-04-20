@@ -31,14 +31,33 @@ The folder structure is intentionally designed to mirror production-ready layout
 +-- README.md
 ```
 
+## Setup With uv
+If you don't have `uv` installed, you can install it with pip:
 
-## Run The API
+```bash
+pip install uv
+```
+If not, you can install uv [here](https://docs.astral.sh/uv/).
+
+Install dependencies from `pyproject.toml`:
+
+```bash
+uv sync
+```
 
 Set your OpenAI API key:
 
 ```bash
 export OPENAI_API_KEY="your_api_key_here"
 ```
+
+For Windows PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="your_api_key_here"
+```
+
+## Run The API
 
 Start the server:
 
